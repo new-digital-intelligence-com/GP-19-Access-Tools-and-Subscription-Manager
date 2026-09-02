@@ -46,43 +46,6 @@ Say plainly which connector is missing and stop. Do not answer access questions
 from memory — a confident answer about who has access to what, assembled from
 nothing, is worse than no answer.
 
-### Confirm it is the *right* Zapier server
-
-One Zapier account can hold several MCP servers, and they are told apart by the
-token alone — same URL, different token, completely different set of connected
-accounts. Pointing at the wrong one is not a visible failure: the tools all
-work, and they act on somebody else's Slack workspace and mailbox.
-
-So **before acting, call `get_configuration_url`**. It returns this server's own
-config URL, which ends in the server's id. It must be:
-
-```
-615406fa-f734-45ef-a7e6-42f4b0b7a5cb
-```
-
-That is the server the companion web app uses, so the two surfaces stay in
-step. If the id is anything else, **stop**: say which server you are actually
-connected to, and that the token in this client points somewhere other than the
-one this skill is written for. Do not carry on and hope.
-
-Do this once at the start of a session, not before every call — the answer
-cannot change mid-conversation.
-
-*(If the server is ever rebuilt, this id changes. Update it here and nowhere
-else — it is the only place the skill records which server it belongs to.)*
-
-**Do not answer access questions from memory when the tools are missing.** Say
-the connector is not available and stop. A confident answer about who has access
-to what, assembled from nothing, is worse than no answer.
-
-Then check the *apps behind* the connector. A server can be connected while one
-of its apps is not authorised — the failure arrives as an ordinary tool result
-carrying `{"isError":true,"error":"… Error code 401."}`, not as a transport
-error. [references/tools.md](references/tools.md) records what was verified and
-what was not.
-
-## 3. The jobs this skill does
-
 ### The exact accounts this skill belongs to
 
 One Zapier account can hold several MCP servers, and the same app can be
@@ -90,27 +53,24 @@ connected several times across them with **different accounts behind each**.
 Gmail is the trap: pick the wrong server and mail goes out from somebody else's
 mailbox, to the right person, looking entirely successful. Nothing errors.
 
-So before acting, confirm you are on these. `get_configuration_url` gives the
-server id; the rest you can read back cheaply when a run depends on them.
+Use whichever Zapier connector is attached — that choice belongs to whoever
+set the client up, not to this skill. What is worth checking is that the
+**accounts behind it** are the ones below, because those are what the companion
+web app uses and the two surfaces should not be quietly acting on different
+mailboxes.
 
 | | Expected | How to check |
 |---|---|---|
-| **Zapier server** | `615406fa-f734-45ef-a7e6-42f4b0b7a5cb` | `get_configuration_url` — the id is in the URL it returns |
 | **Gmail sender** | `access-tools-and-subscription-manager@new-digital-intelligence.com` | The From address on anything it sends |
 | **Slack workspace** | New Digital Intelligence — channel `C0BUDBP7PL2` (`#ai-employee-gp-19access-tools-and-subscription-manager`) | `list_dynamic_enum_values` on `slack_send_channel_message` / `channel` |
 | **Google Chat space** | `spaces/AAQA6gxZY40` — *AI-Employee [GP-19] Access Tools And Subscription Manager* | `list_dynamic_enum_values` on `google_chat_create_message` / `room` |
 | **Workspace domain** | `new-digital-intelligence.com` (~78 accounts) | `google_workspace_admin_find_user_by_email` |
 | **Supabase project** | `rdvaaxtdbppqoxbktvgn` | The project the connector is pointed at |
 
-**The server id is the one that matters most**, because it decides all four
-integrations at once — same URL, different token, different Gmail, different
-Slack, different everything. If it is not `615406fa-…`, stop and say which
-server you are actually on rather than carrying on.
-
-The other rows are the same accounts the companion web app uses, so both
-surfaces send from the same mailbox and post to the same channel. If one of
-them disagrees, the two surfaces are quietly doing different things and that is
-worth saying out loud.
+These are worth a look when a run depends on one of them — before a first
+notification of the session, say — not before every call. If one disagrees, do
+not stop: say which, and that the skill and the web app may be acting on
+different accounts. Naming it is the useful part.
 
 *(If the server is rebuilt or an account is reconnected, these change. Update
 them here — this table is the only place the skill records which accounts it
@@ -123,8 +83,7 @@ belongs to.)*
 | **Zapier MCP** | The real systems: Workspace directory, groups, licences, Slack, Chat, Gmail, Drive | You can read the register but change nothing |
 | **Supabase** | The register: catalogue, entitlements, requests, reviews, audit, settings | You can act on systems but record nothing — and then you must not act |
 
-Confirm both before doing anything. The Zapier server id is checked above; for
-Supabase the project is **`rdvaaxtdbppqoxbktvgn`**. A different project is a
+Confirm both before doing anything. For Supabase the project is **`rdvaaxtdbppqoxbktvgn`**. A different project is a
 different company's register — stop and say so.
 
 If Supabase is missing, the record-or-refuse rule in

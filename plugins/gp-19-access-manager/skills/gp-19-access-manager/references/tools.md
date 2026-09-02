@@ -1,10 +1,10 @@
 # Zapier MCP tool inventory
 
-Verified live against this project's own Zapier MCP server
-(`615406fa-f734-45ef-a7e6-42f4b0b7a5cb`) on **2026-09-02**: **118 tools**.
+Verified live against this project's Zapier MCP server on **2026-09-02**:
+**118 tools**.
 
-Another server on the same account will expose a different set. Check the id
-before trusting anything below — see SKILL.md §2.
+A different server will expose a different set, so treat this as orientation
+rather than a guarantee — the client's own tool listing is the truth.
 
 Tool names appear in your client as `mcp__zapier__<name>`. Discover at runtime
 with the client's own tool listing; this file is for orientation, not a
