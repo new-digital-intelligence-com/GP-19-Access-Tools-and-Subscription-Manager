@@ -29,35 +29,35 @@ There are two surfaces and they share one behaviour contract:
 The plugin is instructions plus an MCP server definition. Claude is the model,
 so there is nothing to pay for beyond your existing subscription.
 
-1. Add this repo as a plugin marketplace:
+1. Add this repo as a plugin marketplace and install the plugin:
 
    ```
-   /plugin marketplace add /path/to/GP-19-Access\ Tools\ and\ Subscription\ Manager
+   /plugin marketplace add new-digital-intelligence-com/GP-19-Access-Tools-and-Subscription-Manager
    /plugin install access-manager@ndi-access
    ```
 
-2. Give the Zapier server a token. The plugin ships `.mcp.json` pointing at
-   `https://mcp.zapier.com/api/v1/connect` with an
-   `Authorization: Bearer ${ZAPIER_MCP_TOKEN}` header. **The token is a
-   placeholder on purpose** — a plugin manifest is committed and shared, and a
-   real token in it is a credential anyone who clones the repo can use. So:
+2. Add the two connectors, in your own client, against your own accounts:
+
+   - **Zapier MCP** — `https://mcp.zapier.com/api/v1/connect`, with the token
+     for server `615406fa-f734-45ef-a7e6-42f4b0b7a5cb`
+     (mcp.zapier.com → your server → **Connect**)
+   - **Supabase** — project `rdvaaxtdbppqoxbktvgn`
+
+   The plugin deliberately ships **no `.mcp.json`**. A Zapier server is
+   addressed by a bearer token, and this repo is shared: a real token in it
+   would be a credential for anyone who clones it, and a placeholder one is a
+   server that never connects. So the connectors are attached per person.
+
+3. Trigger it by name — there is no slash command:
 
    ```
-   export ZAPIER_MCP_TOKEN=…      # then start Claude Code
+   use the access-manager skill
+   access-manager: who still has access after being suspended
+   access-manager: what are we paying for that nobody uses
    ```
 
-   Get it from mcp.zapier.com → your MCP server → **Connect**.
-
-3. `/mcp` to confirm the `zapier` server is connected, then:
-
-   ```
-   /access
-   /access who still has access after being suspended
-   /access what are we paying for that nobody uses
-   ```
-
-In the **Claude app** or on claude.ai, skip `.mcp.json` entirely and add the
-Zapier connector in settings — that file is not read there.
+   It checks both connectors and the server id before doing anything, and stops
+   if it is pointed at the wrong Zapier server.
 
 ### Path B · The web app
 
@@ -349,8 +349,6 @@ that states a made-up business reason is worse than a blank field.
 ```
 plugins/access-manager/
   .claude-plugin/plugin.json
-  .mcp.json                          the zapier server, token from the environment
-  commands/access.md                 the /access command
   skills/access-manager/
     SKILL.md                         the whole contract (not a router — there are no sub-skills)
     references/rules.md              the behaviour contract

@@ -32,16 +32,19 @@ prompt that can drift from them.
 A skill is instructions only; it carries no tool access. Executing anything here
 requires the Zapier connection in this client.
 
-Confirm you can see `mcp__zapier__*` tools. If none are present:
+Confirm you can see `mcp__zapier__*` and Supabase tools. If they are missing,
+the person running you has to add those two connectors themselves — the plugin
+deliberately ships no `.mcp.json`.
 
-- This plugin ships `.mcp.json` pointing at
-  `https://mcp.zapier.com/api/v1/connect` with an
-  `Authorization: Bearer ${ZAPIER_MCP_TOKEN}` header. The token is a placeholder
-  on purpose — a plugin manifest is committed and shared, and a real token in it
-  is a credential anyone who clones the repo can use. Export `ZAPIER_MCP_TOKEN`
-  before starting Claude Code, then `/mcp` to check the server is connected.
-- In the **Claude app** or on claude.ai, add the Zapier connector in settings
-  instead; this file is not read there.
+That is not an omission. A Zapier server is addressed by a **bearer token**, and
+the plugin is committed to a shared repository: a real token in it would be a
+credential for anyone who clones the repo, and a placeholder one is a server
+that never connects. So the connectors are attached per person, in their own
+client, against their own account.
+
+Say plainly which connector is missing and stop. Do not answer access questions
+from memory — a confident answer about who has access to what, assembled from
+nothing, is worse than no answer.
 
 ### Confirm it is the *right* Zapier server
 

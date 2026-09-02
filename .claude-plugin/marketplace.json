@@ -10,10 +10,12 @@
     {
       "name": "access-manager",
       "source": "./plugins/access-manager",
-      "displayName": "NDI - Access Tools and Subscription Manager",
+      "displayName": "GP-19 — Access Tools and Subscription Manager",
       "description": "Provision and de-provision Google Workspace accounts, track entitlements and review them on a schedule, route every access request to a human approver, and keep an audit trail.",
-      "author": { "name": "New Digital Intelligence" },
-      "category": "productivity",
+      "author": {
+        "name": "New Digital Intelligence"
+      },
+      "category": "operations",
       "keywords": [
         "access-management",
         "iam",
@@ -22,8 +24,9 @@
         "access-review",
         "subscriptions",
         "google-workspace",
-        "zapier",
-        "ndi"
+        "slack",
+        "ndi",
+        "gp-19"
       ]
     }
   ]
