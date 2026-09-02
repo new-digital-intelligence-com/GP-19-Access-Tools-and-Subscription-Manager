@@ -135,6 +135,14 @@ silent success.
 
 ## Google Drive — storage capacity
 
+**Use the Drive tool, not the Admin Reports API.** Storage looks like an admin
+question, so the obvious move is `google_workspace_admin_make_api_get_request`
+against `admin.googleapis.com/admin/reports/...` — that fails with *"You are
+required to grant additional permissions"*, because the Workspace Admin
+connection carries the directory scopes and not the reporting one. Retrying
+does not help, and reconnecting is the operator's job. Go to Drive instead: one
+call, and the scope is already there.
+
 One read, and one thing it cannot tell you.
 
 ```

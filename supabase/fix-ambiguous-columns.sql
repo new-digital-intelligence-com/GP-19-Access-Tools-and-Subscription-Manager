@@ -1,47 +1,35 @@
--- GP-19 — the write path, enforced by the database.
+-- GP-19 — fix ambiguous column references in the write functions.
 --
--- Run after schema.sql. Idempotent.
+-- Run this in the Supabase SQL editor. Idempotent, and safe to run on a
+-- database that already has the earlier version.
 --
--- WHY THIS EXISTS
+-- THE BUG
 --
--- The app used to be the only writer, so the rules that make this an access
--- manager — an approval by a named human, never the requester, always audited
--- — lived in TypeScript. The moment a second writer appears (a Claude session
--- on the Supabase connector) those rules are one raw INSERT away from being
--- bypassed, and an entitlement with no approval behind it is exactly what this
--- product exists to prevent.
+-- Every write failed with:
 --
--- So the rules move here. Two halves:
+--     ERROR 42702: column reference "tool_id" is ambiguous
 --
---   1. CONSTRAINTS that make an invalid row impossible, whoever writes it.
---   2. FUNCTIONS that are the only sane way to change access, and which write
---      the audit entry in the same transaction as the change.
+-- The tables keep each record whole in `data jsonb` and expose GENERATED
+-- columns beside it, so `entitlements` has a real column called `tool_id` —
+-- and `gp19_raise_request` takes a parameter of the same name. Inside the
+-- function plpgsql resolves a bare `tool_id` to the COLUMN, not the argument,
+-- and refuses rather than guessing. No request could be raised at all.
 --
--- Claude may call the functions freely. It cannot produce an unapproved grant,
--- because the database will not accept one.
+-- The same collision is latent in `gp19_audit`, whose parameters `actor`,
+-- `action`, `result`, `person_email`, `tool_id` and `request_id` are ALL
+-- generated columns on `audit`.
+--
+-- THE FIX
+--
+-- `#variable_conflict use_variable` at the top of each function body: an
+-- ambiguous name means the parameter. That is what every one of these
+-- functions intends, and it keeps the argument names the skill documents and
+-- calls by name.
+--
+-- Note the SECURITY DEFINER and grants at the bottom. CREATE OR REPLACE
+-- FUNCTION resets a function's attributes, so replacing the bodies without
+-- re-applying them would silently drop the anon role's ability to call them.
 
--- ═══ 1. constraints ════════════════════════════════════════════════════════
-
--- A decided request must name who decided it, and it may never be the person
--- who asked. This is the rule the whole product turns on.
-alter table requests drop constraint if exists requests_decided_by_a_third_party;
-alter table requests add constraint requests_decided_by_a_third_party check (
-  (data->>'status') not in ('approved','denied','provisioned','failed')
-  or (
-    nullif(trim(data->>'decidedBy'), '') is not null
-    and lower(data->>'decidedBy') is distinct from lower(data->>'requesterEmail')
-  )
-);
-
--- Access always names who granted it. "unattributed" is the app's placeholder
--- for an unset operator, and it is not an answer to "who authorised this".
-alter table entitlements drop constraint if exists entitlements_have_an_author;
-alter table entitlements add constraint entitlements_have_an_author check (
-  nullif(trim(data->>'grantedBy'), '') is not null
-  and lower(data->>'grantedBy') <> 'unattributed@localhost'
-);
-
--- The trail is append-only in the strong sense: the database refuses.
 create or replace function gp19_reject_mutation() returns trigger
   language plpgsql as $$
 begin
@@ -49,13 +37,6 @@ begin
     'The audit trail is append-only. % on audit is refused — history that can be edited answers nothing.',
     tg_op;
 end $$;
-
-drop trigger if exists audit_is_append_only on audit;
-create trigger audit_is_append_only
-  before update or delete on audit
-  for each row execute function gp19_reject_mutation();
-
--- ═══ 2. the write path ═════════════════════════════════════════════════════
 
 create or replace function gp19_audit(
   actor text, action text, subject text, result text, detail text,
@@ -75,9 +56,6 @@ begin
   );
 end $$;
 
--- ── raise a request ────────────────────────────────────────────────────────
--- Creates a PENDING request. Grants nothing. This is the only thing an
--- assistant should ever need to do unprompted.
 create or replace function gp19_raise_request(
   requester_email text,
   tool_id text,
@@ -138,9 +116,6 @@ begin
   return new_id;
 end $$;
 
--- ── decide it ──────────────────────────────────────────────────────────────
--- The ONLY way an entitlement is created from a request. Every check that
--- makes an approval an approval lives in here, so there is no path around it.
 create or replace function gp19_decide_request(
   request_id text,
   approver_email text,
@@ -222,7 +197,6 @@ begin
   );
 end $$;
 
--- ── record that the provider step actually happened ────────────────────────
 create or replace function gp19_mark_provisioned(
   entitlement_id text, actor text, detail text
 ) returns void language plpgsql as $$
@@ -239,10 +213,6 @@ begin
     ent->>'requestId', ent->>'toolId', ent->>'personEmail');
 end $$;
 
--- ── revoke ─────────────────────────────────────────────────────────────────
--- `succeeded` is the caller stating whether the provider actually removed it.
--- False leaves the row at pending-revoke, because a failed revoke is not a
--- revoke and must never read as one.
 create or replace function gp19_revoke_entitlement(
   entitlement_id text, actor text, reason text, succeeded boolean default true
 ) returns jsonb language plpgsql as $$
@@ -273,3 +243,22 @@ begin
 
   return jsonb_build_object('status', case when succeeded then 'revoked' else 'pending-revoke' end);
 end $$;
+
+-- ── re-apply what CREATE OR REPLACE just reset ─────────────────────────────
+alter function gp19_audit(text,text,text,text,text,text,text,text)
+  security definer set search_path = public, pg_temp;
+alter function gp19_raise_request(text,text,text,text,text,text)
+  security definer set search_path = public, pg_temp;
+alter function gp19_decide_request(text,text,text,text)
+  security definer set search_path = public, pg_temp;
+alter function gp19_mark_provisioned(text,text,text)
+  security definer set search_path = public, pg_temp;
+alter function gp19_revoke_entitlement(text,text,text,boolean)
+  security definer set search_path = public, pg_temp;
+
+revoke execute on function gp19_audit(text,text,text,text,text,text,text,text) from public, anon, authenticated;
+
+grant execute on function gp19_raise_request(text,text,text,text,text,text)   to anon, authenticated;
+grant execute on function gp19_decide_request(text,text,text,text)            to anon, authenticated;
+grant execute on function gp19_mark_provisioned(text,text,text)               to anon, authenticated;
+grant execute on function gp19_revoke_entitlement(text,text,text,boolean)     to anon, authenticated;

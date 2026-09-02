@@ -224,6 +224,7 @@ different fixes:
 | What you see | What it is | What fixes it |
 |---|---|---|
 | `Error code 401` in the payload | That Zapier app's connection is dead | Re-authorise that app on the Zapier server. Not retryable. |
+| *"required to grant additional permissions"* | The connection has the app but not that API's scope | Not retryable, and not your call to fix. For Drive storage this means you reached for Admin Reports — use `google_drive_make_api_get_request` instead. |
 | `results: []`, no error | A genuine empty result | Nothing. Report it as empty. |
 | `expected record, received string` | `querystring` was passed as an encoded string | Pass a record: `{customer: "my_customer"}` |
 | A dynamic-enum argument rejected | The value was guessed | Resolve it with `list_dynamic_enum_values` |
