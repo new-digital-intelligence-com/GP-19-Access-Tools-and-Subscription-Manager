@@ -1,5 +1,5 @@
 ---
-name: access-manager
+name: gp-19-access-manager
 description: Manage tool access and SaaS subscriptions through Zapier MCP. Use whenever the user wants to grant, request, approve, review or remove access to a tool; provision or de-provision a Google Workspace account; check who has access to something; run an access review; offboard someone; find unused licences or subscription waste; or read the access audit trail.
 ---
 

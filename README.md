@@ -33,7 +33,7 @@ so there is nothing to pay for beyond your existing subscription.
 
    ```
    /plugin marketplace add new-digital-intelligence-com/GP-19-Access-Tools-and-Subscription-Manager
-   /plugin install access-manager@ndi-access
+   /plugin install gp-19-access-manager@ndi-access
    ```
 
 2. Add the two connectors, in your own client, against your own accounts:
@@ -51,9 +51,9 @@ so there is nothing to pay for beyond your existing subscription.
 3. Trigger it by name — there is no slash command:
 
    ```
-   use the access-manager skill
-   access-manager: who still has access after being suspended
-   access-manager: what are we paying for that nobody uses
+   use the gp-19-access-manager skill
+   gp-19-access-manager: who still has access after being suspended
+   gp-19-access-manager: what are we paying for that nobody uses
    ```
 
    It checks both connectors and the server id before doing anything, and stops
@@ -344,12 +344,12 @@ that states a made-up business reason is worse than a blank field.
 
 ## The plugin
 
-`plugins/access-manager/` — one plugin, **one skill**.
+`plugins/gp-19-access-manager/` — one plugin, **one skill**.
 
 ```
-plugins/access-manager/
+plugins/gp-19-access-manager/
   .claude-plugin/plugin.json
-  skills/access-manager/
+  skills/gp-19-access-manager/
     SKILL.md                         the whole contract (not a router — there are no sub-skills)
     references/rules.md              the behaviour contract
     references/tools.md              the verified Zapier inventory

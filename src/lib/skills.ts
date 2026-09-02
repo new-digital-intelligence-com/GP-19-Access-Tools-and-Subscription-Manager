@@ -7,12 +7,12 @@ import path from "node:path";
  *
  * The plugin's skill is the contract. Rather than restating those rules in a
  * second prompt that can drift, the app reads the same file the
- * `access-manager` skill loads, so a rule changed once applies to Claude Code,
+ * `gp-19-access-manager` skill loads, so a rule changed once applies to Claude Code,
  * the Claude app and this app's own agent alike.
  */
 const RULES_PATH = path.join(
   process.cwd(),
-  "plugins/access-manager/skills/access-manager/references/rules.md",
+  "plugins/gp-19-access-manager/skills/gp-19-access-manager/references/rules.md",
 );
 
 let cached: string | null = null;

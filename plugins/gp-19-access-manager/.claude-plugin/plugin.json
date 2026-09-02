@@ -1,8 +1,10 @@
 {
-  "name": "access-manager",
+  "name": "gp-19-access-manager",
   "displayName": "GP-19 — Access Tools and Subscription Manager",
   "description": "NDI's GP-19 AI Employee. Provisions and de-provisions access through Google Workspace and Slack, tracks entitlements against what each seat costs, reviews them on a schedule, routes every access request to a named human approver, and keeps an append-only audit trail.",
-  "author": { "name": "New Digital Intelligence" },
+  "author": {
+    "name": "New Digital Intelligence"
+  },
   "repository": "https://github.com/new-digital-intelligence-com/GP-19-Access-Tools-and-Subscription-Manager",
   "license": "UNLICENSED",
   "keywords": [

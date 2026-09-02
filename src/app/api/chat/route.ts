@@ -70,7 +70,7 @@ How to report.
 
 Be brief. Answer the question and stop.
 
-The rules below are the shared contract with the access-manager skill. Follow
+The rules below are the shared contract with the gp-19-access-manager skill. Follow
 them exactly.`;
 
 /**

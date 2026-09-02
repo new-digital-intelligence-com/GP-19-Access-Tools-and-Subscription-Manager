@@ -8,8 +8,8 @@
   "description": "NDI's Access Tools and Subscription Manager plugin for Claude Code and Cowork, installable straight from this repo.",
   "plugins": [
     {
-      "name": "access-manager",
-      "source": "./plugins/access-manager",
+      "name": "gp-19-access-manager",
+      "source": "./plugins/gp-19-access-manager",
       "displayName": "GP-19 — Access Tools and Subscription Manager",
       "description": "Provision and de-provision Google Workspace accounts, track entitlements and review them on a schedule, route every access request to a human approver, and keep an audit trail.",
       "author": {

@@ -1,7 +1,7 @@
 # Access management operating rules
 
 The behaviour contract for this organisation's tool access, shared by every
-surface. Claude Code loads it through the `access-manager` skill; the web app
+surface. Claude Code loads it through the `gp-19-access-manager` skill; the web app
 reads this same file into its agent's system prompt via `src/lib/skills.ts`, so
 a rule changed once applies to both.
 
