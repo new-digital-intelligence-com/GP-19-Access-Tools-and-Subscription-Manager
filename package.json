@@ -9,8 +9,7 @@
     "lint": "eslint",
     "seed": "node scripts/seed.mjs",
     "probe": "node scripts/probe-zapier.mjs",
-    "smoke": "node scripts/smoke.mjs",
-    "migrate": "node scripts/migrate-to-supabase.mjs"
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

@@ -17,8 +17,7 @@ export async function record(
   event: Omit<AuditEvent, "id" | "at">,
 ): Promise<AuditEvent> {
   const entry: AuditEvent = { ...event, id: newId("evt"), at: new Date().toISOString() };
-  // `append`, never a rewrite: on Postgres the trail is insert-only, and on
-  // files this keeps the two backends behaving identically.
+  // `append`, never a rewrite — the trail only ever grows at the front.
   return append<AuditEvent>("audit", entry);
 }
 

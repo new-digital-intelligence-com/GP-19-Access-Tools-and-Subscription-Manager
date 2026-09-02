@@ -153,8 +153,26 @@ google_drive_make_api_get_request
 ```
 
 Returns `limit`, `usage`, `usageInDrive`, `usageInDriveTrash`, all in **bytes as
-strings**. `limit` is the whole domain's pooled quota, not the connected
-account's share.
+strings**. `limit` is the whole domain's pooled quota; everything else is the
+**connected account only**.
+
+**There is no per-account breakdown available.** This call answers "how big is
+the pool and how much of it is this one account using" — it cannot tell you
+what each of the other accounts holds. That report lives behind the Admin SDK:
+
+```
+admin.googleapis.com/admin/reports/v1/usage/users/all/dates/<YYYY-MM-DD>
+  ?parameters=accounts:drive_used_quota_in_mb
+```
+
+and it needs the `admin.reports.usage.readonly` scope, which the Workspace
+Admin connection does not currently carry — it returns *"required to grant
+additional permissions"*. Reconnecting that app in Zapier with reporting
+granted is the only way, and it is the operator's to do.
+
+So when someone asks who is using the storage, say plainly that only the pool
+total and one account are readable, and name the missing scope. Do not divide
+the pool by the headcount and present the result as usage.
 
 **There is no billing API.** Drive reports capacity and nothing about money, so
 never state a storage cost from these figures. The pool is normally bought

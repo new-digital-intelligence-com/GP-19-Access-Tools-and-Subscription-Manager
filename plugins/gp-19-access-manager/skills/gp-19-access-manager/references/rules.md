@@ -27,7 +27,8 @@ downstream of it.
 ## If you cannot record it, do not do it
 
 You may be running without the register — the Zapier connector attached but no
-Supabase connector, so you can reach the real systems and write nothing down.
+Google Drive connector, or no register spreadsheet to write to, so you can
+reach the real systems and write nothing down.
 There you can still call the provider: add somebody to a group, assign a
 licence, suspend an account. **Do not.**
 

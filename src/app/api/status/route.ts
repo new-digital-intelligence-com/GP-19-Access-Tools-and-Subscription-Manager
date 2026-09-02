@@ -12,8 +12,6 @@ import {
   operatorConfigured,
 } from "@/lib/settings";
 import { zapierStatus } from "@/lib/zapier";
-import { storeBackend } from "@/lib/store";
-import { supabaseHealth } from "@/lib/supabase";
 import type { ZapierStatus } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -88,23 +86,6 @@ export async function GET() {
     ]);
 
   const model = modelStatus();
-  const register = await supabaseHealth().catch(() => ({
-    state: "unavailable" as const,
-    detail: "The health probe itself failed.",
-  }));
-
-  // A configured-but-broken register is the dangerous state: every count below
-  // comes from it, so a failure here makes the whole screen meaningless rather
-  // than merely incomplete.
-  if (storeBackend() === "supabase" && register.state !== "ready") {
-    alerts.push({
-      level: "error",
-      text:
-        `The register database is ${register.state}${register.detail ? `: ${register.detail}` : "."} ` +
-        "Every figure on this page comes from it, so treat them as unknown, not as zero.",
-    });
-  }
-
   const failedRevokes = pendingRevoke.length;
   const manualTools = new Set(
     tools.filter((tool) => tool.provisioning === "manual").map((tool) => tool.id),
@@ -223,9 +204,6 @@ export async function GET() {
 
   return NextResponse.json({
     zapier,
-    // Which store answered, and whether it is healthy. The skill reads this to
-    // know whether it and the app are looking at the same register.
-    register: { backend: storeBackend(), ...register },
     model,
     operator: { email: operator(), configured: operatorConfigured() },
     counts: {

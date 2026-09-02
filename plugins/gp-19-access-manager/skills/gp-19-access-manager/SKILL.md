@@ -32,7 +32,7 @@ prompt that can drift from them.
 A skill is instructions only; it carries no tool access. Executing anything here
 requires the Zapier connection in this client.
 
-Confirm you can see `mcp__zapier__*` and Supabase tools. You need no
+Confirm you can see `mcp__zapier__*` and Google Drive tools. You need no
 credentials of your own — no URL, no token, no server id. The connectors are
 already attached in this client, and whichever ones are there are the ones to
 use.
@@ -61,7 +61,7 @@ mailboxes.
 | **Slack workspace** | New Digital Intelligence — channel `C0BUDBP7PL2` (`#ai-employee-gp-19access-tools-and-subscription-manager`) | `list_dynamic_enum_values` on `slack_send_channel_message` / `channel` |
 | **Google Chat space** | `spaces/AAQA6gxZY40` — *AI-Employee [GP-19] Access Tools And Subscription Manager* | `list_dynamic_enum_values` on `google_chat_create_message` / `room` |
 | **Workspace domain** | `new-digital-intelligence.com` (~78 accounts) | `google_workspace_admin_find_user_by_email` |
-| **Supabase project** | `rdvaaxtdbppqoxbktvgn` | The project the connector is pointed at |
+| **Register sheet** | the GP-19 register spreadsheet on Drive — see below | Its `README` tab names it |
 
 These are worth a look when a run depends on one of them — before a first
 notification of the session, say — not before every call. If one disagrees, do
@@ -77,81 +77,72 @@ belongs to.)*
 | Connector | Gives you | Without it |
 |---|---|---|
 | **Zapier MCP** | The real systems: Workspace directory, groups, licences, Slack, Chat, Gmail, Drive | You can read the register but change nothing |
-| **Supabase** | The register: catalogue, entitlements, requests, reviews, audit, settings | You can act on systems but record nothing — and then you must not act |
+| **Google Drive** | The register spreadsheet: catalogue, entitlements, requests, reviews, audit, settings | You can act on systems but record nothing — and then you must not act |
 
-Confirm both before doing anything. For Supabase the project is **`rdvaaxtdbppqoxbktvgn`**. A different project is a
-different company's register — stop and say so.
-
-If Supabase is missing, the record-or-refuse rule in
+Confirm both before doing anything. If the Drive connector or the register
+spreadsheet is missing, the record-or-refuse rule in
 [references/rules.md](references/rules.md) applies in full: read, prepare,
 notify, and do not touch access.
 
-### The register lives in Postgres
+### The register lives in a Google Sheet
 
-Six tables. Each keeps the whole record in `data jsonb`, with generated columns
-beside it so ordinary SQL works:
+One spreadsheet on Drive, read and written through the **Google Drive
+connector**. Open it and start from its `README` tab — that tab is written for
+whoever finds the file, and it states the same rules as this section.
 
-```sql
-select person_email, tool_id, status, granted_at
-from entitlements where status = 'active';
+Seven tabs. The header row is the contract: find columns **by name**, never by
+position, because a column added in the middle would otherwise silently shift
+every read.
 
-select r.requester_email, c.name, r.status, r.approver_email
-from requests r join catalog c on c.id = r.tool_id
-where r.status = 'pending';
-```
-
-| Table | Query columns |
+| Tab | Holds |
 |---|---|
-| `catalog` | `name, vendor, owner_email, provisioning, sensitive, archived_at` |
-| `entitlements` | `person_email, tool_id, status, source, granted_at, expires_at` |
-| `requests` | `requester_email, tool_id, status, approver_email, decided_by, created_at` |
-| `reviews` | `name, status, due_at` |
-| `audit` | `at, actor, action, result, person_email, tool_id, request_id` |
-| `settings` | one row, `id = 'singleton'` |
+| `catalog` | Tools: `id, name, vendor, category, ownerEmail, costPerSeat, seatsPurchased, provisioning, groupEmail, productId, skuId, slackChannelId, roles, reviewCadenceDays, sensitive, notes, createdAt, archivedAt` |
+| `entitlements` | `id, personEmail, personName, toolId, role, status, source, grantedAt, grantedBy, expiresAt, revokedAt, revokedBy, requestId, lastReviewedAt, lastReviewDecision, provisionNote` |
+| `requests` | `id, requesterEmail, requesterName, toolId, role, justification, expiresAt, status, createdAt, approverEmail, decidedAt, decidedBy, decisionNote, provisionResult, entitlementId, notifications` |
+| `reviews` | `id, name, toolIds, createdAt, createdBy, dueAt, status, closedAt, items` |
+| `audit` | `id, at, actor, action, subject, result, detail, requestId, toolId, personEmail` |
+| `settings` | Two columns, `setting` and `value` |
+| `README` | What the file is. Read it first. |
 
-Anything not a generated column is inside `data` — reach it with
-`data->>'justification'` and the like.
+**Cells holding a list or an object are JSON text** — `roles`, `toolIds`,
+`items`, `notifications`, `provisionResult`. Parse them on the way in and
+serialise valid JSON on the way out; a malformed cell makes that row
+unreadable to the next session.
 
-### Writing: four functions, and nothing else
+`status` is `active | revoked | pending-revoke` on an entitlement, and
+`pending | approved | denied | provisioned | failed | cancelled` on a request.
 
-**Never `insert`, `update` or `delete` these tables directly.** The database
-will refuse, and it is right to: the rules that make this an access manager
-live in these functions, and every one of them writes its own audit row in the
-same transaction as the change.
+### Writing to it
 
-```sql
--- 1. raise it. Creates a PENDING request. Grants nothing.
-select gp19_raise_request(
-  requester_email := 'dana@acme.com',
-  tool_id         := 'tool_figma',
-  justification   := 'joining the design team, needs the component library',
-  role            := 'editor',
-  expires_at      := '2026-12-31');
+A spreadsheet cannot enforce the rules a database could, so **you** carry them.
+Before writing anything, re-read the approval protocol in §4 and the
+record-or-refuse rule in [references/rules.md](references/rules.md).
 
--- 2. a human decides. You never call this off your own bat.
-select gp19_decide_request('req_…', 'owner@acme.com', 'approve', 'agreed in standup');
-select gp19_decide_request('req_…', 'owner@acme.com', 'deny',    'use the shared account');
+The order is what makes it safe:
 
--- 3. it is recorded but NOT live. Now do the provider step over Zapier —
---    add to the Google group, assign the licence, invite to the channel.
+1. **Raise** — append a row to `requests` with `status: pending`, a real
+   justification, and `approverEmail` set to the tool's owner. Append a
+   `request.created` row to `audit`. Grant nothing.
+2. **A human decides.** Never you. Never the requester.
+3. **Record the decision** — update that request's `status`, `decidedAt`,
+   `decidedBy`, `decisionNote`. Append `request.approved` or `request.denied`
+   to `audit`. On an approval, append the `entitlements` row too, with
+   `source: request`, `grantedBy` set to the approver, and `provisionNote`
+   saying it is not yet carried out.
+4. **Then do the provider step** over Zapier — the group, the licence, the
+   channel — and only then update `provisionNote` and append
+   `grant.provisioned` to `audit`.
 
--- 4. say what actually happened.
-select gp19_mark_provisioned('ent_…', 'owner@acme.com', 'Added to design@acme.com.');
+Two rules that matter more than the mechanics:
 
--- revoking is the mirror. `succeeded := false` leaves it pending-revoke,
--- because a failed revoke is not a revoke.
-select gp19_revoke_entitlement('ent_…', 'owner@acme.com', 'left the design team', true);
-```
+- **Every write to `entitlements` or `requests` gets a matching `audit` row, in
+  the same turn.** A grant with no trail is the thing this product exists to
+  prevent, and here nothing but you will catch it.
+- **`audit` is append-only.** Add rows at the end; never edit or delete one.
+  Failures belong in it too — a `revoke.failed` row means the access remained.
 
-What the database itself refuses, whatever you send: a request approved by the
-person who raised it, an approval naming nobody, deciding a decided request, a
-grant with no author, a revoke with no reason, and any edit or delete of the
-audit trail.
-
-**Step 3 is the one to get right.** `gp19_decide_request` records the decision;
-it cannot call Google or Slack, because a database cannot. Until you have done
-the provider step and called `gp19_mark_provisioned`, the access is approved
-and **not live** — say exactly that rather than reporting it as granted.
+If a write half-completes — the request updated but the audit row not appended
+— say so plainly and name what is missing. Do not tidy it away.
 
 ### The companion web app
 
