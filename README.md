@@ -38,7 +38,8 @@ server id.**
    ```
 
 2. Make sure two connectors are enabled in your client — **Zapier** and
-   **Google Drive**, the latter with access to the register spreadsheet.
+   **Google Drive**, the latter with access to the register spreadsheet
+   (`1jXCsmnHdP1YTn4BxIs2A_-j7O9tLg9W6`).
 
    The plugin ships no `.mcp.json` on purpose: a Zapier server is addressed by
    a bearer token, and this repo is shared, so a real token in it would be a

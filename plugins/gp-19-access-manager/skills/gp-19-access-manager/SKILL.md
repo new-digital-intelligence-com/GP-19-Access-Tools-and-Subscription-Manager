@@ -61,7 +61,7 @@ mailboxes.
 | **Slack workspace** | New Digital Intelligence — channel `C0BUDBP7PL2` (`#ai-employee-gp-19access-tools-and-subscription-manager`) | `list_dynamic_enum_values` on `slack_send_channel_message` / `channel` |
 | **Google Chat space** | `spaces/AAQA6gxZY40` — *AI-Employee [GP-19] Access Tools And Subscription Manager* | `list_dynamic_enum_values` on `google_chat_create_message` / `room` |
 | **Workspace domain** | `new-digital-intelligence.com` (~78 accounts) | `google_workspace_admin_find_user_by_email` |
-| **Register sheet** | the GP-19 register spreadsheet on Drive — see below | Its `README` tab names it |
+| **Register sheet** | Drive file `1jXCsmnHdP1YTn4BxIs2A_-j7O9tLg9W6` | Open it — the `README` tab names it |
 
 These are worth a look when a run depends on one of them — before a first
 notification of the session, say — not before every call. If one disagrees, do
@@ -87,8 +87,15 @@ notify, and do not touch access.
 ### The register lives in a Google Sheet
 
 One spreadsheet on Drive, read and written through the **Google Drive
-connector**. Open it and start from its `README` tab — that tab is written for
-whoever finds the file, and it states the same rules as this section.
+connector**:
+
+```
+1jXCsmnHdP1YTn4BxIs2A_-j7O9tLg9W6
+https://docs.google.com/spreadsheets/d/1jXCsmnHdP1YTn4BxIs2A_-j7O9tLg9W6/edit
+```
+
+Open it and start from its `README` tab — that tab is written for whoever finds
+the file, and it states the same rules as this section.
 
 Seven tabs. The header row is the contract: find columns **by name**, never by
 position, because a column added in the middle would otherwise silently shift
