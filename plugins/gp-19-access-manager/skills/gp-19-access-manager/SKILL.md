@@ -268,7 +268,7 @@ different fixes:
 
 | What you see | What it is | What fixes it |
 |---|---|---|
-| `Error code 401` in the payload | That Zapier app's connection is dead | Re-authorise the app at mcp.zapier.com. Not retryable. |
+| `Error code 401` in the payload | That Zapier app's connection is dead | Re-authorise that app on the Zapier server. Not retryable. |
 | `results: []`, no error | A genuine empty result | Nothing. Report it as empty. |
 | `expected record, received string` | `querystring` was passed as an encoded string | Pass a record: `{customer: "my_customer"}` |
 | A dynamic-enum argument rejected | The value was guessed | Resolve it with `list_dynamic_enum_values` |

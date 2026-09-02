@@ -1,8 +1,7 @@
 # Zapier MCP tool inventory
 
 Verified live against this project's own Zapier MCP server
-(`615406fa-f734-45ef-a7e6-42f4b0b7a5cb`) on **2026-09-02**: **118 tools** over
-one Streamable HTTP endpoint at `https://mcp.zapier.com/api/v1/connect`.
+(`615406fa-f734-45ef-a7e6-42f4b0b7a5cb`) on **2026-09-02**: **118 tools**.
 
 Another server on the same account will expose a different set. Check the id
 before trusting anything below — see SKILL.md §2.
