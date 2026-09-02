@@ -80,6 +80,39 @@ what was not.
 
 ## 3. The jobs this skill does
 
+### The exact accounts this skill belongs to
+
+One Zapier account can hold several MCP servers, and the same app can be
+connected several times across them with **different accounts behind each**.
+Gmail is the trap: pick the wrong server and mail goes out from somebody else's
+mailbox, to the right person, looking entirely successful. Nothing errors.
+
+So before acting, confirm you are on these. `get_configuration_url` gives the
+server id; the rest you can read back cheaply when a run depends on them.
+
+| | Expected | How to check |
+|---|---|---|
+| **Zapier server** | `615406fa-f734-45ef-a7e6-42f4b0b7a5cb` | `get_configuration_url` — the id is in the URL it returns |
+| **Gmail sender** | `access-tools-and-subscription-manager@new-digital-intelligence.com` | The From address on anything it sends |
+| **Slack workspace** | New Digital Intelligence — channel `C0BUDBP7PL2` (`#ai-employee-gp-19access-tools-and-subscription-manager`) | `list_dynamic_enum_values` on `slack_send_channel_message` / `channel` |
+| **Google Chat space** | `spaces/AAQA6gxZY40` — *AI-Employee [GP-19] Access Tools And Subscription Manager* | `list_dynamic_enum_values` on `google_chat_create_message` / `room` |
+| **Workspace domain** | `new-digital-intelligence.com` (~78 accounts) | `google_workspace_admin_find_user_by_email` |
+| **Supabase project** | `rdvaaxtdbppqoxbktvgn` | The project the connector is pointed at |
+
+**The server id is the one that matters most**, because it decides all four
+integrations at once — same URL, different token, different Gmail, different
+Slack, different everything. If it is not `615406fa-…`, stop and say which
+server you are actually on rather than carrying on.
+
+The other rows are the same accounts the companion web app uses, so both
+surfaces send from the same mailbox and post to the same channel. If one of
+them disagrees, the two surfaces are quietly doing different things and that is
+worth saying out loud.
+
+*(If the server is rebuilt or an account is reconnected, these change. Update
+them here — this table is the only place the skill records which accounts it
+belongs to.)*
+
 ### You need two connectors
 
 | Connector | Gives you | Without it |

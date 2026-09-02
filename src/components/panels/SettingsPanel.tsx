@@ -14,6 +14,12 @@ import {
   inputClass,
 } from "@/components/ui";
 import type { Settings, ZapierStatus } from "@/lib/types";
+import {
+  PINNED_CHAT_LABEL,
+  PINNED_CHAT_SPACE,
+  PINNED_SLACK_CHANNEL,
+  PINNED_SLACK_LABEL,
+} from "@/lib/pinned";
 
 /**
  * Settings, which are governance rather than preferences.
@@ -206,7 +212,8 @@ export function SettingsPanel() {
               chat: form.notifyChat,
               slack: form.notifySlack,
             },
-            chatRoom: form.chatRoom.trim(),
+            // Display-only above, so the pinned value is what gets stored.
+            chatRoom: PINNED_CHAT_SPACE,
             registerSheetId: form.registerSheetId.trim(),
             slackChannel: form.slackChannel.trim(),
             voice: form.voice.trim(),
@@ -252,11 +259,14 @@ export function SettingsPanel() {
     setPublishing(false);
   }
 
-  const rooms = feed?.chatRooms ?? [];
+  // `chatRooms` is still fetched and still worth having — an empty list means
+  // the Zapier app is not in any space, which is the one thing that stops
+  // Chat notifications working. It just no longer feeds a picker.
+  const chatSpaceVisible = (feed?.chatRooms ?? []).some(
+    (room) => room.value === PINNED_CHAT_SPACE,
+  );
   const slackList = feed?.slackChannels ?? [];
   const approvers = form ? approverList(form.approvers) : [];
-  const roomListed = rooms.some((room) => room.value === form?.chatRoom);
-  const connectionReady = status?.zapier.state === "ready";
 
   return (
     <div className="space-y-6">
@@ -460,97 +470,55 @@ export function SettingsPanel() {
               label="Slack channel"
               hint="Approvals are posted here and the approver is @-mentioned. Leave it empty to direct-message them instead."
             >
-              {slackList.length > 0 ? (
-                <select
-                  className={inputClass}
-                  value={form.slackChannel}
-                  onChange={(event) => change({ slackChannel: event.target.value })}
-                >
-                  <option value="">No fallback — skip Slack when there is no account</option>
-                  {form.slackChannel &&
-                  !slackList.some((c) => c.value === form.slackChannel) ? (
-                    <option value={form.slackChannel}>
-                      {form.slackChannel} — saved here, not offered by the connection
-                    </option>
-                  ) : null}
-                  {slackList.map((channel) => (
-                    <option key={channel.value} value={channel.value}>
-                      #{channel.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  className={inputClass}
-                  value={form.slackChannel}
-                  onChange={(event) => change({ slackChannel: event.target.value })}
-                  placeholder="C0BEYSR1XMM"
-                />
-              )}
+              {/* The connection can see every channel in the workspace,
+                  including other AI Employees'. Only this one belongs to
+                  GP-19, so it is the only choice offered — picking a wrong
+                  channel is not a visible failure, the approval just lands
+                  where nobody is watching for it. */}
+              <select
+                className={inputClass}
+                value={form.slackChannel}
+                onChange={(event) => change({ slackChannel: event.target.value })}
+              >
+                <option value="">No Slack channel — direct-message the approver</option>
+                <option value={PINNED_SLACK_CHANNEL}>#{PINNED_SLACK_LABEL}</option>
+              </select>
+              {slackList.length > 1 ? (
+                <span className="mt-1 block text-xs text-black/45">
+                  The connection can see {slackList.length} channels; this deployment is pinned to
+                  the one above.
+                </span>
+              ) : null}
             </Field>
 
+            {/* Not a choice. There is exactly one space for this employee, and
+                letting somebody pick another only creates a way to post
+                approvals somewhere nobody reads. Shown so the operator can see
+                where they go, and confirm it is the space they expect. */}
             <Field
               label="Google Chat space"
-              hint="The space approvals are posted to."
+              hint="Fixed for this deployment. Approvals are posted here and the approver is mentioned."
             >
-              {rooms.length > 0 ? (
-                <select
-                  className={inputClass}
-                  value={form.chatRoom}
-                  onChange={(event) => change({ chatRoom: event.target.value })}
-                >
-                  <option value="">No space selected</option>
-                  {rooms.map((room) => (
-                    <option key={room.value} value={room.value}>
-                      {room.label}
-                    </option>
-                  ))}
-                  {form.chatRoom && !roomListed ? (
-                    // A stored value that the connection no longer offers is
-                    // kept rather than dropped: silently clearing it would
-                    // switch off chat notifications without saying so.
-                    <option value={form.chatRoom}>
-                      {form.chatRoom} — saved here, not offered by the connection
-                    </option>
-                  ) : null}
-                </select>
-              ) : (
-                <input
-                  className={`${inputClass} font-mono`}
-                  value={form.chatRoom}
-                  onChange={(event) => change({ chatRoom: event.target.value })}
-                  placeholder="spaces/AAAAxxxxxxx"
-                />
-              )}
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-black/10 bg-black/[0.02] px-3.5 py-2.5 text-sm">
+                <span className="font-medium">{PINNED_CHAT_LABEL}</span>
+                <span className="font-mono text-[11px] text-black/40">{PINNED_CHAT_SPACE}</span>
+              </div>
             </Field>
 
-            {rooms.length === 0 ? (
+            {form.chatRoom && form.chatRoom !== PINNED_CHAT_SPACE ? (
               <Note>
-                No spaces came back, so there is nothing to pick from and the box above takes the
-                room value directly. The list is read live from the Google Chat connection each
-                time this screen loads, and it comes back empty for one of two reasons.{" "}
-                {statusFailed
-                  ? "The connection state could not be read here, so which one applies is unknown."
-                  : status === null
-                    ? "The connection state is still being read, so which one applies is not known yet."
-                    : connectionReady
-                      ? "The connection itself is reachable, so the likely reason is that no space is shared with the connected account — a Google Chat space only appears once that account has been added to it. Add it to the space and reload, or paste the space id above."
-                      : `The connection is ${status.zapier.state}${
-                          status.zapier.detail ? ` (${status.zapier.detail})` : ""
-                        }, so the list could not be read at all. That is an outage, not an empty Chat workspace.`}{" "}
-                A value typed here is saved either way; it is only the picker that needs the
-                connection.
+                Settings currently hold a different space ({form.chatRoom}). Saving from this
+                screen replaces it with the one above.
               </Note>
             ) : null}
 
-            {form.notifyChat && !form.chatRoom.trim() ? (
-              <ErrorNote>
-                Chat notifications are switched on and no space is set, so every chat notification
-                will fail.{" "}
-                {form.notifyEmail
-                  ? "Email is still going out, so approvers will hear about requests that way."
-                  : "Email is off as well, so nobody will be told about a request at all."}
-              </ErrorNote>
+            {/* The space existing is not the same as the app being in it, and
+                that is the failure people lose an afternoon to. */}
+            {!chatSpaceVisible ? (
+              <Note>
+                The connection cannot see that space, so a post to it will fail. Open the space in
+                Google Chat, then Apps &amp; integrations, and add the Zapier app.
+              </Note>
             ) : null}
           </Card>
 

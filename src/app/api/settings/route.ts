@@ -3,6 +3,13 @@ import { record } from "@/lib/audit";
 import { chatRooms, slackChannels } from "@/lib/providers/notify";
 import { getSettings, operator, saveSettings } from "@/lib/settings";
 import type { Settings } from "@/lib/types";
+import {
+  PINNED_CHAT_LABEL,
+  PINNED_CHAT_SPACE,
+  PINNED_SLACK_LABEL,
+  chatSpaceAllowed,
+  slackChannelAllowed,
+} from "@/lib/pinned";
 
 export const runtime = "nodejs";
 
@@ -91,19 +98,40 @@ export async function PUT(request: Request) {
   }
 
   if ("domain" in body) patch.domain = text(body.domain).toLowerCase();
-  if ("chatRoom" in body) patch.chatRoom = text(body.chatRoom);
   if ("voice" in body) patch.voice = text(body.voice) || current.voice;
   if ("currency" in body) patch.currency = text(body.currency) || current.currency;
+
+  // Pinned, not merely defaulted. Restricting the dropdown is cosmetic — this
+  // route is what stores the value, and an approval posted to another team's
+  // channel is not a visible failure: it goes out, it looks fine, and nobody
+  // who needed to see it does.
+  if ("chatRoom" in body) {
+    const room = text(body.chatRoom);
+    if (!chatSpaceAllowed(room)) {
+      return bad(
+        `This deployment posts to "${PINNED_CHAT_LABEL}" (${PINNED_CHAT_SPACE}) and no other ` +
+          "space. Send that value, or an empty string to switch Google Chat off.",
+      );
+    }
+    patch.chatRoom = room;
+  }
+
+  if ("slackChannel" in body) {
+    const channel = text(body.slackChannel);
+    if (!slackChannelAllowed(channel)) {
+      return bad(
+        `This deployment posts to #${PINNED_SLACK_LABEL} and no other channel. Send that ` +
+          "channel id, or an empty string to direct-message the approver instead.",
+      );
+    }
+    patch.slackChannel = channel;
+  }
 
   if ("registerSheetId" in body) {
     // A pasted URL is the obvious mistake; keep the id out of it.
     const raw = text(body.registerSheetId);
     patch.registerSheetId =
       /\/spreadsheets\/d\/([A-Za-z0-9_-]+)/.exec(raw)?.[1] ?? raw;
-  }
-
-  if ("slackChannel" in body) {
-    patch.slackChannel = text(body.slackChannel);
   }
 
   if ("notify" in body) {
