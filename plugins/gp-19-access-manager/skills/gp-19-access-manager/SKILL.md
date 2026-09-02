@@ -32,17 +32,13 @@ prompt that can drift from them.
 A skill is instructions only; it carries no tool access. Executing anything here
 requires the Zapier connection in this client.
 
-Confirm you can see `mcp__zapier__*` and Supabase tools. If they are missing,
-the person running you has to add those two connectors themselves — the plugin
-deliberately ships no `.mcp.json`.
+Confirm you can see `mcp__zapier__*` and Supabase tools. You need no
+credentials of your own — no URL, no token, no server id. The connectors are
+already attached in this client, and whichever ones are there are the ones to
+use.
 
-That is not an omission. A Zapier server is addressed by a **bearer token**, and
-the plugin is committed to a shared repository: a real token in it would be a
-credential for anyone who clones the repo, and a placeholder one is a server
-that never connects. So the connectors are attached per person, in their own
-client, against their own account.
-
-Say plainly which connector is missing and stop. Do not answer access questions
+If either is missing, that is the operator's to fix, not yours. Say plainly
+which one and stop. Do not answer access questions
 from memory — a confident answer about who has access to what, assembled from
 nothing, is worse than no answer.
 

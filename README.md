@@ -24,10 +24,11 @@ There are two surfaces and they share one behaviour contract:
 
 ## Setup — pick your path
 
-### Path A · Claude Code plugin — no API key, no `.env`, no Node
+### Path A · Claude — no credentials, no `.env`, no Node
 
-The plugin is instructions plus an MCP server definition. Claude is the model,
-so there is nothing to pay for beyond your existing subscription.
+The plugin is instructions only. Claude is the model, and the connectors are
+already in your client — **nothing here asks you for a URL, a token or a
+server id.**
 
 1. Add this repo as a plugin marketplace and install the plugin:
 
@@ -36,17 +37,13 @@ so there is nothing to pay for beyond your existing subscription.
    /plugin install gp-19-access-manager@ndi-access
    ```
 
-2. Add the two connectors, in your own client, against your own accounts:
+2. Make sure two connectors are enabled in your client — **Zapier** and
+   **Supabase**. If you already use them, there is nothing to do.
 
-   - **Zapier MCP** — `https://mcp.zapier.com/api/v1/connect`, with the token
-     for server `615406fa-f734-45ef-a7e6-42f4b0b7a5cb`
-     (mcp.zapier.com → your server → **Connect**)
-   - **Supabase** — project `rdvaaxtdbppqoxbktvgn`
-
-   The plugin deliberately ships **no `.mcp.json`**. A Zapier server is
-   addressed by a bearer token, and this repo is shared: a real token in it
-   would be a credential for anyone who clones it, and a placeholder one is a
-   server that never connects. So the connectors are attached per person.
+   The plugin ships no `.mcp.json` on purpose: a Zapier server is addressed by
+   a bearer token, and this repo is shared, so a real token in it would be a
+   credential for anyone who clones it. Connectors are attached per person,
+   in their own client.
 
 3. Trigger it by name — there is no slash command:
 
@@ -56,8 +53,7 @@ so there is nothing to pay for beyond your existing subscription.
    gp-19-access-manager: what are we paying for that nobody uses
    ```
 
-   It checks both connectors and the server id before doing anything, and stops
-   if it is pointed at the wrong Zapier server.
+   It checks the two connectors are present and stops if one is missing.
 
 ### Path B · The web app
 
@@ -118,7 +114,7 @@ Google Sheets is on the same server and reachable, but nothing here calls it. Th
 
 Probed live against this project's own server. Reproduce with `npm run probe`.
 
-**118 tools exposed** on server `615406fa-…`: Slack 33, Google Sheets 30,
+**118 tools exposed:** Slack 33, Google Sheets 30,
 Google Drive 22, Google Workspace Admin 15, Gmail 14, helpers 3, Google Chat 1.
 
 | Check | Result |

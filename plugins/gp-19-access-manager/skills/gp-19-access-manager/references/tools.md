@@ -198,9 +198,9 @@ Run `npm run probe` in the web app to reproduce this.
 
 | Check | Result |
 |---|---|
-| Handshake and token | ok |
+| Connection | ok |
 | Workspace Admin — user lookup | ok |
 | Workspace Admin — directory list | ok |
 | Gmail — mailbox search | ok |
-| Google Chat — list spaces | ok, but **0 spaces**; nothing can be posted |
+| Google Chat — list spaces | ok — the space is now shared with the connection |
 | Slack — user lookup and channel list | ok |
