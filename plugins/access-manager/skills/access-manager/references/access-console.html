@@ -1,0 +1,620 @@
+<!--
+  Access Console — the one artifact for the access-manager skill.
+
+  Everything renders from the single DATA object at the bottom of this file.
+  Replace DATA, keep everything above it, republish to the same URL.
+
+  Three things this page exists to keep apart, and must never flatten:
+    - "not loaded yet"  (key absent)   vs  "nothing here" (key is [])
+    - an approval that stands with a grant that FAILED
+    - a revoke that was attempted and DID NOT WORK
+
+  No build step, no framework, no network. See artifact.md for the contract.
+-->
+<title>Access Console</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --ink: #101014;
+    --muted: #6b6b73;
+    --faint: #96969e;
+    --line: rgba(0, 0, 0, 0.1);
+    --hair: rgba(0, 0, 0, 0.06);
+    --brand: #fe0100;
+    --brand-ink: #c40100;
+    --ok-bg: #ecfdf3; --ok-ink: #05683c; --ok-line: #a7e8c4;
+    --warn-bg: #fffaeb; --warn-ink: #8a5300; --warn-line: #f5d789;
+    --bad-bg: #fef2f2; --bad-ink: #a8231d; --bad-line: #f6bcb8;
+    --chip: rgba(0, 0, 0, 0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e0e11;
+      --panel: #17171c;
+      --ink: #ececf1;
+      --muted: #9c9ca6;
+      --faint: #6e6e78;
+      --line: rgba(255, 255, 255, 0.12);
+      --hair: rgba(255, 255, 255, 0.07);
+      --brand: #ff4a44;
+      --brand-ink: #ff7a75;
+      --ok-bg: #0d2a1c; --ok-ink: #6fdca4; --ok-line: #1d5638;
+      --warn-bg: #2b210a; --warn-ink: #f0c265; --warn-line: #5a4413;
+      --bad-bg: #2c1414; --bad-ink: #ff9d97; --bad-line: #5e2523;
+      --chip: rgba(255, 255, 255, 0.07);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 28px 20px 72px; }
+
+  header .eyebrow {
+    font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--brand-ink);
+  }
+  h1 { margin: 8px 0 0; font-size: 26px; letter-spacing: -0.02em; }
+  .stamp { margin-top: 6px; color: var(--faint); font-size: 12px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px 18px;
+  }
+  .card + .card { margin-top: 12px; }
+  section { margin-top: 22px; }
+
+  h2 {
+    display: flex; align-items: center; gap: 10px;
+    margin: 0 0 10px; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  }
+  h2::before {
+    content: ""; width: 4px; height: 13px; border-radius: 3px; background: var(--brand);
+  }
+  h3 { margin: 20px 0 8px; font-size: 14px; }
+  h3:first-child { margin-top: 0; }
+  p { margin: 0 0 10px; }
+  .lede { color: var(--muted); }
+
+  nav.tabs {
+    display: flex; flex-wrap: wrap; gap: 4px; margin: 20px 0 16px;
+    background: var(--panel); border: 1px solid var(--hair);
+    border-radius: 12px; padding: 4px;
+  }
+  nav.tabs button {
+    appearance: none; border: 0; background: transparent; color: var(--muted);
+    font: 500 13px/1 inherit; padding: 9px 13px; border-radius: 9px; cursor: pointer;
+  }
+  nav.tabs button:hover { color: var(--ink); background: var(--chip); }
+  nav.tabs button[aria-selected="true"] { background: var(--brand); color: #fff; }
+
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .stat .n {
+    font: 600 24px/1.2 inherit; font-variant-numeric: tabular-nums;
+  }
+  .stat .l { color: var(--muted); font-size: 13px; }
+  .stat .n.none { color: var(--faint); font-weight: 500; font-size: 15px; }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+  table { width: 100%; min-width: 640px; border-collapse: collapse; }
+  th, td { padding: 10px 13px; text-align: left; vertical-align: top; }
+  th {
+    font: 600 11px/1.4 inherit; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--hair); white-space: nowrap;
+  }
+  tbody tr + tr td { border-top: 1px solid var(--hair); }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; white-space: nowrap; border: 1px solid;
+  }
+  .pill.ok { background: var(--ok-bg); color: var(--ok-ink); border-color: var(--ok-line); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn-ink); border-color: var(--warn-line); }
+  .pill.bad { background: var(--bad-bg); color: var(--bad-ink); border-color: var(--bad-line); }
+  .pill.mute { background: var(--chip); color: var(--muted); border-color: transparent; }
+
+  .banner { border-radius: 12px; padding: 11px 14px; font-size: 13px; border: 1px solid; }
+  .banner + .banner { margin-top: 8px; }
+  .banner.warn { background: var(--warn-bg); color: var(--warn-ink); border-color: var(--warn-line); }
+  .banner.bad { background: var(--bad-bg); color: var(--bad-ink); border-color: var(--bad-line); }
+  .banner b { font-weight: 600; }
+
+  /* The two states this page must never let read as success. */
+  .flag {
+    display: block; margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--bad-ink);
+  }
+
+  .empty {
+    border: 1px dashed var(--line); border-radius: 14px;
+    padding: 26px 18px; text-align: center; color: var(--muted); font-size: 13px;
+  }
+  .empty.unloaded { color: var(--faint); font-style: italic; }
+
+  .conn { display: flex; flex-wrap: wrap; gap: 8px; }
+  .conn .c {
+    flex: 1 1 210px; border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 12px; background: var(--panel);
+  }
+  .conn .c .name { font-weight: 600; font-size: 13px; }
+  .conn .c .does { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .conn .c .detail { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+  button.copy {
+    appearance: none; cursor: pointer; font: 500 12px/1 inherit;
+    padding: 7px 11px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  }
+  button.copy:hover { border-color: var(--brand); color: var(--brand-ink); }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+  footer { margin-top: 34px; color: var(--faint); font-size: 12px; }
+  code { background: var(--chip); padding: 1px 5px; border-radius: 5px; font-size: 12px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">GP-19</div>
+    <h1>Access Console</h1>
+    <div class="stamp" id="stamp"></div>
+  </header>
+
+  <section id="connectors-section">
+    <h2>Connectors</h2>
+    <div id="connectors"></div>
+  </section>
+
+  <div id="alerts"></div>
+
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <div id="panel"></div>
+
+  <footer>
+    A snapshot, not a control surface. Nothing on this page calls a provider, and
+    nothing here can approve or grant access — that happens in the app or in the
+    conversation, on a named person's decision. Use “Copy for Claude” to hand a
+    section back for action.
+  </footer>
+</div>
+
+<script>
+  /* ---------- helpers ------------------------------------------------------ */
+
+  var esc = function (v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  };
+
+  /* A value that was never fetched reads differently from one that is zero. */
+  function num(v) {
+    if (v === null || v === undefined || v === "") {
+      return '<span class="n none">not checked</span>';
+    }
+    return '<span class="n">' + esc(v) + "</span>";
+  }
+
+  function money(v, currency) {
+    if (v === null || v === undefined) return "—";
+    var n = Number(v);
+    if (!isFinite(n)) return "—";
+    return (currency ? currency + " " : "") + n.toLocaleString(undefined, {
+      minimumFractionDigits: 0, maximumFractionDigits: 2,
+    });
+  }
+
+  function when(iso, opts) {
+    if (!iso) return '<span style="color:var(--faint)">—</span>';
+    var d = new Date(iso);
+    if (isNaN(d.getTime()) || d.getTime() <= 0) return '<span style="color:var(--faint)">—</span>';
+    var abs = d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    return '<span title="' + esc(d.toISOString()) + '">' +
+      ((opts && opts.absolute) ? abs : ago(d) + " · " + d.toLocaleDateString(undefined, { dateStyle: "medium" })) +
+      "</span>";
+  }
+
+  function ago(d) {
+    var s = Math.round((Date.now() - d.getTime()) / 1000);
+    var future = s < 0, n = Math.abs(s), out;
+    if (n < 60) out = n + "s";
+    else if (n < 3600) out = Math.round(n / 60) + "m";
+    else if (n < 86400) out = Math.round(n / 3600) + "h";
+    else if (n < 2592000) out = Math.round(n / 86400) + "d";
+    else out = Math.round(n / 2592000) + "mo";
+    return future ? "in " + out : out + " ago";
+  }
+
+  var TONE = {
+    active: "ok", provisioned: "ok", approved: "ok", keep: "ok", ok: "ok", open: "ok",
+    pending: "warn", "pending-revoke": "bad", due: "warn", suspended: "warn", dormant: "warn",
+    failed: "bad", error: "bad", revoke: "bad", overdue: "bad", archived: "bad",
+    revoked: "mute", denied: "mute", cancelled: "mute", closed: "mute", info: "mute",
+  };
+
+  function pill(state, label) {
+    if (!state) return "";
+    return '<span class="pill ' + (TONE[state] || "mute") + '">' +
+      esc(label || String(state).replace(/-/g, " ")) + "</span>";
+  }
+
+  /* Absent vs empty — the single most important distinction on this page. */
+  function unloaded(what) {
+    return '<div class="empty unloaded">' + esc(what) + " — not loaded yet.</div>";
+  }
+  function nothing(what) {
+    return '<div class="empty">' + esc(what) + "</div>";
+  }
+
+  function table(headers, rows) {
+    if (!rows.length) return "";
+    return '<div class="scroll"><table><thead><tr>' +
+      headers.map(function (h) { return "<th>" + esc(h) + "</th>"; }).join("") +
+      "</tr></thead><tbody>" + rows.join("") + "</tbody></table></div>";
+  }
+
+  function copyButton(id, label) {
+    return '<button class="copy" data-copy="' + esc(id) + '">' + esc(label || "Copy for Claude") + "</button>";
+  }
+
+  function sectionHead(title, copyId) {
+    return '<div class="head"><h2>' + esc(title) + "</h2>" +
+      (copyId ? copyButton(copyId) : "") + "</div>";
+  }
+
+  /* ---------- connectors --------------------------------------------------- */
+
+  function renderConnectors() {
+    var list = DATA.connectors;
+    var host = document.getElementById("connectors");
+    if (!list) { host.innerHTML = unloaded("Connector state"); return; }
+    if (!list.length) { host.innerHTML = nothing("No connectors are configured."); return; }
+
+    host.innerHTML = '<div class="conn">' + list.map(function (c) {
+      /* Three states, not two. null means "not checked this refresh" — printing
+         "not connected" over a working connector sends someone off to fix
+         something that was never broken. */
+      var state = c.connected === true ? pill("ok", "Connected")
+        : c.connected === false ? pill("failed", "Not connected")
+        : pill("info", "Not checked this refresh");
+      return '<div class="c"><div class="name">' + esc(c.name) + " " + state + "</div>" +
+        (c.does ? '<div class="does">' + esc(c.does) + "</div>" : "") +
+        (c.detail ? '<div class="detail">' + esc(c.detail) + "</div>" : "") +
+        "</div>";
+    }).join("") + "</div>";
+  }
+
+  function renderAlerts() {
+    var host = document.getElementById("alerts");
+    var list = DATA.alerts;
+    if (!list || !list.length) { host.innerHTML = ""; return; }
+    host.innerHTML = '<section>' + list.map(function (a) {
+      return '<div class="banner ' + (a.level === "error" ? "bad" : "warn") + '">' + esc(a.text) + "</div>";
+    }).join("") + "</section>";
+  }
+
+  /* ---------- panels ------------------------------------------------------- */
+
+  var D = function () { return DATA.data || {}; };
+
+  var PANELS = {
+    overview: function () {
+      var o = D().overview;
+      if (!o) return sectionHead("Overview") + unloaded("The headline figures");
+      var stats = (o.stats || []).map(function (s) {
+        return '<div class="card stat">' + num(s.value) + '<div class="l">' + esc(s.label) + "</div></div>";
+      }).join("");
+      var spend = o.spend
+        ? '<div class="card stat"><div class="n">' + esc(money(o.spend.monthly, o.spend.currency)) +
+          '</div><div class="l">Monthly spend</div></div>' +
+          '<div class="card stat"><div class="n">' + esc(money(o.spend.waste, o.spend.currency)) +
+          '</div><div class="l">Idle seats, per month</div></div>'
+        : "";
+      return sectionHead("Overview", "overview") +
+        (stats || spend ? '<div class="grid">' + stats + spend + "</div>" : nothing("Nothing to show."));
+    },
+
+    requests: function () {
+      var rows = D().requests;
+      if (!rows) return sectionHead("Requests") + unloaded("Access requests");
+      if (!rows.length) return sectionHead("Requests") + nothing("No access requests.");
+      return sectionHead("Requests", "requests") + table(
+        ["Requester", "Tool", "Status", "Raised", "Decision"],
+        rows.map(function (r) {
+          /* "failed" is an approval that STANDS over a grant that did not
+             happen. It is neither a pending request nor a success, and the
+             sentence below is the only thing that says so. */
+          var failed = r.status === "failed";
+          return "<tr>" +
+            "<td>" + esc(r.requester) + (r.role ? '<div style="color:var(--muted);font-size:12px">' + esc(r.role) + "</div>" : "") + "</td>" +
+            "<td>" + esc(r.tool) + (r.justification ? '<div style="color:var(--muted);font-size:12px">' + esc(r.justification) + "</div>" : "") + "</td>" +
+            "<td>" + pill(r.status) +
+              (failed ? '<span class="flag">Approved, but the grant failed — this person does NOT have access.' +
+                (r.provision ? " " + esc(r.provision) : "") + "</span>" : "") + "</td>" +
+            '<td class="num">' + when(r.createdAt) + "</td>" +
+            "<td>" + (r.decidedBy ? esc(r.decidedBy) : '<span style="color:var(--faint)">awaiting ' + esc(r.approver || "an approver") + "</span>") +
+              (r.decisionNote ? '<div style="color:var(--muted);font-size:12px">' + esc(r.decisionNote) + "</div>" : "") +
+              (!r.decidedBy && !r.approver ? '<span class="flag">Not routed to anyone — nobody has been asked.</span>' : "") +
+            "</td></tr>";
+        }),
+      );
+    },
+
+    entitlements: function () {
+      var rows = D().entitlements;
+      if (!rows) return sectionHead("Entitlements") + unloaded("The entitlement register");
+      if (!rows.length) return sectionHead("Entitlements") + nothing("Nobody holds anything in the register.");
+      return sectionHead("Entitlements", "entitlements") + table(
+        ["Person", "Tool", "Status", "Source", "Granted", "Expires", "Last review"],
+        rows.map(function (e) {
+          /* pending-revoke means the removal FAILED. It must never read as
+             "revoked" — that is the whole reason an access review exists. */
+          var stuck = e.status === "pending-revoke";
+          return "<tr>" +
+            "<td>" + esc(e.person) + "</td>" +
+            "<td>" + esc(e.tool) + (e.role ? '<div style="color:var(--muted);font-size:12px">' + esc(e.role) + "</div>" : "") + "</td>" +
+            "<td>" + pill(e.status) +
+              (stuck ? '<span class="flag">The revoke failed — this access may still be live.' +
+                (e.note ? " " + esc(e.note) : "") + "</span>" : "") + "</td>" +
+            "<td>" + pill("info", e.source || "—") + "</td>" +
+            '<td class="num">' + when(e.grantedAt) + "</td>" +
+            '<td class="num">' + (e.expiresAt ? when(e.expiresAt) : '<span style="color:var(--faint)">no end date</span>') + "</td>" +
+            '<td class="num">' + (e.lastReviewedAt ? when(e.lastReviewedAt) : '<span style="color:var(--faint)">never reviewed</span>') + "</td>" +
+            "</tr>";
+        }),
+      );
+    },
+
+    catalog: function () {
+      var rows = D().catalog;
+      if (!rows) return sectionHead("Catalogue") + unloaded("Tools and subscriptions");
+      if (!rows.length) return sectionHead("Catalogue") + nothing("No tools in the catalogue.");
+      return sectionHead("Catalogue", "catalog") + table(
+        ["Tool", "Owner", "Provisioning", "Cost/seat", "Purchased", "Held", "Idle"],
+        rows.map(function (t) {
+          return "<tr>" +
+            "<td>" + esc(t.name) +
+              (t.sensitive ? " " + pill("warn", "sensitive") : "") +
+              (t.vendor ? '<div style="color:var(--muted);font-size:12px">' + esc(t.vendor) + "</div>" : "") + "</td>" +
+            "<td>" + (t.owner ? esc(t.owner) :
+              '<span class="pill bad">no owner</span><span class="flag">Approvals cannot be routed.</span>') + "</td>" +
+            "<td>" + pill("info", t.provisioning || "—") + "</td>" +
+            '<td class="num">' + esc(money(t.costPerSeat)) + "</td>" +
+            '<td class="num">' + esc(t.seatsPurchased == null ? "—" : t.seatsPurchased) + "</td>" +
+            '<td class="num">' + esc(t.seatsHeld == null ? "—" : t.seatsHeld) + "</td>" +
+            '<td class="num">' + esc(t.idle == null ? "—" : t.idle) + "</td>" +
+            "</tr>";
+        }),
+      );
+    },
+
+    people: function () {
+      var p = D().people;
+      if (!p) return sectionHead("People") + unloaded("The Workspace directory");
+      if (p.available === false) {
+        return sectionHead("People") +
+          '<div class="banner bad"><b>The directory could not be read.</b> ' +
+          esc(p.detail || "") +
+          " Nothing was listed, so this is not a finding that nobody has an account.</div>";
+      }
+      var rows = p.rows;
+      if (!rows) return sectionHead("People") + unloaded("The directory rows");
+      var partial = p.detail
+        ? '<div class="banner warn"><b>This directory is incomplete.</b> ' + esc(p.detail) + "</div>"
+        : "";
+      if (!rows.length) return sectionHead("People") + partial + nothing("No accounts in the directory.");
+      return sectionHead("People", "people") + partial +
+        '<p class="lede" style="margin-top:10px">This is the account directory, not an HR record. ' +
+        "Account state describes the account — it is a signal worth reviewing, not a statement " +
+        "about anyone's employment.</p>" +
+        table(["Name", "Email", "Role", "Department", "Account", "Last sign-in"],
+          rows.map(function (r) {
+            return "<tr>" +
+              "<td>" + esc(r.name) + "</td>" +
+              '<td class="mono">' + esc(r.email) + "</td>" +
+              "<td>" + esc(r.jobTitle || "—") + "</td>" +
+              "<td>" + esc(r.department || "—") + "</td>" +
+              "<td>" + pill(r.accountState) + "</td>" +
+              /* Google returns the epoch for an account never signed into; the
+                 word "Never" is the only honest rendering. */
+              '<td class="num">' + (r.lastLoginAt ? when(r.lastLoginAt) :
+                '<span style="color:var(--faint)">Never</span>') + "</td>" +
+              "</tr>";
+          }));
+    },
+
+    reviews: function () {
+      var r = D().reviews;
+      if (!r) return sectionHead("Reviews") + unloaded("Scheduled reviews");
+      var out = sectionHead("Reviews", "reviews");
+
+      out += "<h3>Cadence</h3>";
+      if (!r.due) out += unloaded("Which tools are due");
+      else if (!r.due.length) out += nothing("No tools have a review cadence set.");
+      else out += table(["Tool", "Last reviewed", "Status"], r.due.map(function (d) {
+        var over = d.dueSince >= 0;
+        return "<tr><td>" + esc(d.tool) + "</td>" +
+          '<td class="num">' + (d.lastReviewedAt ? when(d.lastReviewedAt) :
+            '<span style="color:var(--faint)">never reviewed</span>') + "</td>" +
+          "<td>" + (over
+            ? pill("overdue", "overdue by " + d.dueSince + "d")
+            : pill("ok", "due in " + Math.abs(d.dueSince) + "d")) + "</td></tr>";
+      }));
+
+      out += "<h3>Campaigns</h3>";
+      if (!r.campaigns) out += unloaded("Review campaigns");
+      else if (!r.campaigns.length) out += nothing("No review campaigns have been opened.");
+      else out += table(["Campaign", "Due", "Status", "Decided"], r.campaigns.map(function (c) {
+        var undecided = (c.total || 0) - (c.decided || 0);
+        return "<tr><td>" + esc(c.name) + "</td>" +
+          '<td class="num">' + when(c.dueAt) + "</td>" +
+          "<td>" + pill(c.status) + "</td>" +
+          '<td class="num">' + esc(c.decided) + " of " + esc(c.total) +
+            (c.status === "closed" && undecided > 0
+              ? '<span class="flag">' + undecided + " never reviewed.</span>" : "") +
+          "</td></tr>";
+      }));
+      return out;
+    },
+
+    lifecycle: function () {
+      var l = D().lifecycle;
+      if (!l) return sectionHead("Lifecycle") + unloaded("The access signals");
+      if (l.available === false) {
+        return sectionHead("Lifecycle") +
+          '<div class="banner bad"><b>The directory could not be read, so nothing was checked.</b> ' +
+          esc(l.detail || "") +
+          " This is not a finding that everyone's access is in order.</div>";
+      }
+
+      var out = sectionHead("Lifecycle", "lifecycle") +
+        '<p class="lede">Signals from the account directory, not HR facts. No HR system is ' +
+        "connected, so none of these says that a person has left — each is a reason to look.</p>" +
+        (l.detail ? '<div class="banner warn">' + esc(l.detail) + "</div>" : "");
+
+      function holdings(rows, title, blurb, cols) {
+        var s = "<h3>" + esc(title) + "</h3>" +
+          (blurb ? '<p class="lede">' + esc(blurb) + "</p>" : "");
+        if (!rows) return s + unloaded(title);
+        if (!rows.length) return s + nothing("Nothing here.");
+        return s + table(cols, rows.map(function (r) {
+          return "<tr>" +
+            "<td>" + esc(r.name || r.email) +
+              (r.name ? '<div class="mono" style="color:var(--muted)">' + esc(r.email) + "</div>" : "") + "</td>" +
+            (cols.indexOf("Account") >= 0 ? "<td>" + pill(r.accountState) + "</td>" : "") +
+            (cols.indexOf("Idle") >= 0 ? '<td class="num">' +
+              (r.idleDays == null ? "—" : esc(r.idleDays) + "d") + "</td>" : "") +
+            (cols.indexOf("Age") >= 0 ? '<td class="num">' +
+              (r.ageDays == null ? "—" : esc(r.ageDays) + "d") + "</td>" : "") +
+            '<td class="num">' + esc(r.holds == null ? "—" : r.holds) + "</td>" +
+            (cols.indexOf("Cost/mo") >= 0 ? '<td class="num">' + esc(money(r.monthlyCost)) + "</td>" : "") +
+            "</tr>";
+        }));
+      }
+
+      out += holdings(l.departures, "Suspended or archived accounts still holding access",
+        "The account is switched off and the access is not. Worth reviewing first.",
+        ["Person", "Account", "Idle", "Holds", "Cost/mo"]);
+
+      out += holdings(l.dormant, "Dormant accounts still holding access",
+        "Active accounts nobody has signed into for " + esc(l.dormantAfterDays || "?") + " days or more.",
+        ["Person", "Idle", "Holds", "Cost/mo"]);
+
+      out += holdings(l.joiners, "New accounts",
+        "Recently created. Access is granted by request, so an empty holdings column is normal.",
+        ["Person", "Age", "Holds"]);
+
+      out += "<h3>Grants with no Workspace account</h3>" +
+        '<p class="lede">The strongest signal on this page: the register is paying for access ' +
+        "that no account can even use.</p>";
+      if (!l.orphans) out += unloaded("Orphaned grants");
+      else if (!l.orphans.length) out += nothing("Every grant maps to a real account.");
+      else out += table(["Address", "Holds", "Cost/mo"], l.orphans.map(function (o) {
+        return '<tr><td class="mono">' + esc(o.email) + "</td>" +
+          '<td class="num">' + esc(o.holds) + "</td>" +
+          '<td class="num">' + esc(money(o.monthlyCost)) + "</td></tr>";
+      }));
+      return out;
+    },
+
+    audit: function () {
+      var rows = D().audit;
+      if (!rows) return sectionHead("Audit") + unloaded("The audit trail");
+      if (!rows.length) return sectionHead("Audit") + nothing("Nothing has been recorded yet.");
+      return sectionHead("Audit", "audit") +
+        '<p class="lede">Append-only. Failures are recorded here too — a ' +
+        "<code>revoke.failed</code> line means the access remained.</p>" +
+        table(["When", "Actor", "Action", "Subject", "Result", "Detail"],
+          rows.map(function (a) {
+            return "<tr>" +
+              '<td class="num">' + when(a.at) + "</td>" +
+              "<td>" + esc(a.actor) + "</td>" +
+              '<td class="mono">' + esc(a.action) + "</td>" +
+              "<td>" + esc(a.subject) + "</td>" +
+              "<td>" + pill(a.result) + "</td>" +
+              "<td>" + esc(a.detail) + "</td></tr>";
+          }));
+    },
+  };
+
+  var TABS = [
+    ["overview", "Overview"], ["requests", "Requests"], ["entitlements", "Entitlements"],
+    ["catalog", "Catalogue"], ["people", "People"], ["reviews", "Reviews"],
+    ["lifecycle", "Lifecycle"], ["audit", "Audit"],
+  ];
+
+  var active = "overview";
+
+  function renderTabs() {
+    document.getElementById("tabs").innerHTML = TABS.map(function (t) {
+      return '<button role="tab" data-tab="' + t[0] + '" aria-selected="' +
+        (t[0] === active) + '">' + esc(t[1]) + "</button>";
+    }).join("");
+  }
+
+  function renderPanel() {
+    document.getElementById("panel").innerHTML = "<section>" + PANELS[active]() + "</section>";
+  }
+
+  function render() {
+    document.getElementById("stamp").textContent = DATA.updated
+      ? "Refreshed " + new Date(DATA.updated).toLocaleString(undefined,
+          { dateStyle: "medium", timeStyle: "short" })
+      : "Never refreshed — this page has not been filled in yet.";
+    renderConnectors();
+    renderAlerts();
+    renderTabs();
+    renderPanel();
+  }
+
+  document.addEventListener("click", function (event) {
+    var tab = event.target.closest("[data-tab]");
+    if (tab) { active = tab.getAttribute("data-tab"); renderTabs(); renderPanel(); return; }
+
+    var copy = event.target.closest("[data-copy]");
+    if (!copy) return;
+    var key = copy.getAttribute("data-copy");
+    var payload = "Here is the " + key + " section from the Access Console. " +
+      "Nothing here has been actioned — tell me what you would do, and put any " +
+      "decision to a named approver.\n\n" +
+      JSON.stringify((D())[key] === undefined ? null : (D())[key], null, 2);
+    navigator.clipboard.writeText(payload).then(function () {
+      var was = copy.textContent;
+      copy.textContent = "Copied";
+      setTimeout(function () { copy.textContent = was; }, 1400);
+    }, function () {
+      copy.textContent = "Copy failed";
+    });
+  });
+
+  /* ---------- DATA --------------------------------------------------------
+     Replace everything below. A key you did NOT fetch must be left OUT (the
+     section renders "not loaded yet"); a key you fetched with nothing in it is
+     [] (it renders "nothing here"). Those two must never look alike.
+     ---------------------------------------------------------------------- */
+
+  var DATA = {
+    // updated: "2026-09-01T12:00:00Z",
+    // connectors: [
+    //   { name: "Google Workspace Admin", does: "Provisioning and the people directory", connected: true },
+    //   { name: "Gmail", does: "Approval requests and decisions", connected: true },
+    //   { name: "Google Chat", does: "Approval notices", connected: true,
+    //     detail: "Connected, but no space is shared with it — Gmail is the working channel." },
+    // ],
+    // alerts: [],
+    data: {},
+  };
+
+  render();
+</script>

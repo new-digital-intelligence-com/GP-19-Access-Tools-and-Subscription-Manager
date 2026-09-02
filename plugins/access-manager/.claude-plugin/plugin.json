@@ -1,0 +1,21 @@
+{
+  "name": "access-manager",
+  "displayName": "NDI - Access Tools and Subscription Manager",
+  "version": "0.1.0",
+  "description": "Manage tool access end to end through Zapier MCP: provision and de-provision Google Workspace accounts, track entitlements, run scheduled access reviews, route approvals to a human, and keep an audit trail.",
+  "author": {
+    "name": "New Digital Intelligence"
+  },
+  "license": "UNLICENSED",
+  "keywords": [
+    "access-management",
+    "iam",
+    "provisioning",
+    "entitlements",
+    "access-review",
+    "subscriptions",
+    "google-workspace",
+    "zapier",
+    "ndi"
+  ]
+}
